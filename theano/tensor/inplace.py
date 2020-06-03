@@ -313,6 +313,22 @@ def i1_inplace(x):
 @_scal_inplace
 def iv_inplace(v, x):
     """Modified Bessel function of the first kind of order v (real)."""
+    
+# -------------------- My new additions
+
+@_scal_inplace
+def gammaincu(x, a):
+    """Incomplete upper gamma function"""
+
+@_scal_inplace
+def meijert(m, x, a):
+    """Special case of the Meijer G function"""
+
+@_scal_inplace
+def gammaincinv(x, y):
+    """The inverse of the regularised incomplete lower gamma function"""
+    
+# --------------------
 
 
 @_scal_inplace

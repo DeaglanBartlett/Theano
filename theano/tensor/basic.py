@@ -2450,6 +2450,22 @@ def i1(x):
 @_scal_elemwise
 def iv(v, x):
     """Modified Bessel function of the first kind of order v (real)."""
+    
+# -------------------- My new additions
+
+@_scal_elemwise
+def gammaincu(x, a):
+    """Incomplete upper gamma function"""
+
+@_scal_elemwise
+def meijert(m, x, a):
+    """Special case of the Meijer G function"""
+
+@_scal_elemwise
+def gammaincinv(x, y):
+    """The inverse of the regularised incomplete lower gamma function"""
+    
+# --------------------
 
 
 @_scal_elemwise

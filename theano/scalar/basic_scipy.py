@@ -855,3 +855,112 @@ class I0(UnaryScalarOp):
         return [gz * i1(x)]
 
 i0 = I0(upgrade_to_float, name='i0')
+
+# --------------------- My additions below
+
+from theano.scalar.basic import ScalarOp
+class TernaryScalarOp(ScalarOp):
+# One may define in subclasses the following fields:
+#   - `identity`: for an associative operation, identity corresponds to
+#     the neutral element. For instance, it will be 0 for addition, 1 for
+#     multiplication, True for "and", False for "or".
+#   - `commutative`: whether op(a, b) == op(b, a)
+#   - `associative`: whether op(op(a, b), c) == op(a, op(b, c))
+    nin = 3
+
+import sympy
+from theano.scalar.basic import log, exp
+
+class GammaIncU(BinaryScalarOp):
+    """
+    Inverse incomplete upper gamma function. NOT REGULARISED
+    GammaIncU(x, a) = int_a^infty t^{x-1} e^{-t} dt
+    """
+    
+    @staticmethod
+    def st_impl(x, a):
+        return scipy.special.gammaincc(x, a) * scipy.special.gamma(x)
+        
+    def impl(self, x, a):
+        return GammaIncU.st_impl(x, a)
+        
+    def grad(self, inputs, grads):
+        x, a = inputs
+        gz, = grads
+#        return [tt.log(a) * gammaincu(x, a) + a * meijert(3, x, a), - a ** (x-1) * tt.exp(-a)]
+        return [log(a) * gammaincu(x, a) + a * meijert(3, x, a), - a ** (x-1) * exp(-a)]
+        
+    def __eq__(self, other):
+        return type(self) == type(other)
+        
+    def __hash__(self):
+        return hash(type(self))
+        
+#scalar_gammaincu  = GammaIncU(upgrade_to_float, name='scalar_gammaincu')
+#gammaincu = tt.Elemwise(scalar_gammaincu, name='gammaincu')
+gammaincu = GammaIncU(upgrade_to_float, name='gammaincu')
+        
+class MeijerT(TernaryScalarOp):
+    """
+    Special case of the Meijer G function
+    T(m, x, a) = G^{m, 0}_{m-1, m} (^{0, 0, ...}_{x-1, -1, ..., -1} | a)
+    """
+    
+    @staticmethod
+    def st_impl(m, x, a):
+        m = int(m)
+        avec = ((), tuple(1 for i in range(m-1)))
+        bvec = ((tuple(x if i == m-1 else 0 for i in range(m))), ())
+        T = sympy.functions.special.hyper.meijerg(avec, bvec, a)
+        return T.evalf()
+        
+    def impl(self, m, x, a):
+        return MeijerT.st_impl(m, x, a)
+        
+    def grad(self, inputs, grads):
+        m, x, a = inputs
+        gz, = grads
+        m = int(m)
+#        return [grad_not_implemented(self, m, 0, 0), tt.log(a) * meijert(m,x,a) + (m-1) * meijert(m+1, x, a), - 1/a * (meijert(m-1, x, a) + meijert(m+1, x, a))]
+        return [grad_not_implemented(self, m, 1, 1), log(a) * meijert(m,x,a) + (m-1) * meijert(m+1, x, a), - 1/a * (meijert(m-1, x, a) + meijert(m+1, x, a))]
+        
+    def __eq__(self, other):
+        return type(self) == type(other)
+        
+    def __hash__(self):
+        return hash(type(self))
+        
+#scalar_meijert  = MeijerT(upgrade_to_float, name='scalar_meijert')
+#meijert = tt.Elemwise(scalar_meijert, name='meijert')
+meijert = MeijerT(upgrade_to_float, name='meijert')
+
+class GammaIncInv(BinaryScalarOp):
+    """
+    The inverse of the regularised incomplete lower gamma function
+    """
+    
+    @staticmethod
+    def st_impl(x, y):
+        return scipy.special.gammaincinv(x,y)
+        
+    def impl(self, x, y):
+        return GammaIncInv.st_impl(x, y)
+        
+    def grad(self, inputs, grads):
+    # Use finv'(x) = 1 / f'(finv(x))
+        x, y = inputs
+        gz, = grads
+        var = gammaincinv(x, y)
+        a = var
+#        return [gammaincu(var, a)/tt.gamma(var) * (tt.psi(var) - tt.log(a)) - a * meijert(3, var, a) / tt.gamma(var), grad_not_implemented(self, 0, y)]
+        return [gammaincu(var, a)/gamma(var) * (psi(var) - log(a)) - a * meijert(3, var, a) / gamma(var), grad_not_implemented(self, 0, y)]
+        
+    def __eq__(self, other):
+        return type(self) == type(other)
+        
+    def __hash__(self):
+        return hash(type(self))
+        
+#scalar_gammaincinv  = GammaIncInv(upgrade_to_float, name='scalar_gammaincinv')
+#gammaincinv = tt.Elemwise(scalar_gammaincinv, name='gammaincinv')
+gammaincinv = GammaIncInv(upgrade_to_float, name='gammaincinv')
